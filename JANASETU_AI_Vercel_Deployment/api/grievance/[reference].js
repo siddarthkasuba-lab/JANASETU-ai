@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   try {
     const sql = getDb();
     const ref = String(req.query.reference || "").trim().toUpperCase();
-    if (!/^JNS-[A-F0-9]{8}$/.test(ref)) return res.status(400).json({ error: "Enter a valid reference such as JNS-AB12CD34." });
+    if (!/^JNS-(?:[A-F0-9]{8}|[A-F0-9]{12})$/.test(ref)) return res.status(400).json({ error: "Enter a valid reference such as JNS-AB12CD34EF." });
 
     if (req.method === "PATCH") {
       if (!requireAdmin(req, res)) return;
