@@ -57,7 +57,6 @@ export default async function handler(req, res) {
       .slice(0, 5);
     const context = scored.map(item => item.service);
 
-    const isTelugu = /[\u0C00-\u0C7F]/.test(message);
     if (process.env.OPENAI_API_KEY) {
       try {
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -67,33 +66,24 @@ export default async function handler(req, res) {
             model: process.env.OPENAI_MODEL || "gpt-4o-mini",
             temperature: 0.2,
             messages: [
-              { role: "system", content: isTelugu
-                ? "మీరు JANASETU అనే ప్రజాసేవల మార్గదర్శి. మీ సమాధానం మొత్తం సహజమైన, సులభమైన తెలుగులోనే తెలుగు లిపిలో రాయాలి. ఇంగ్లీష్‌లో సమాధానం ఇవ్వకండి; అవసరమైన అధికారిక పేర్లు లేదా వెబ్‌సైట్ పేర్లు మాత్రమే ఇంగ్లీష్‌లో ఉండవచ్చు. అందించిన సేవా రికార్డుల ఆధారంగానే వివరాలు చెప్పండి. అర్హతలు, ఫీజులు, గడువులు, ఫోన్ నంబర్లు లేదా అధికారికంగా ఫిర్యాదు నమోదైందని కల్పించకండి. తెలియకపోతే అధికారిక శాఖ వెబ్‌సైట్‌లో నిర్ధారించమని తెలుగులో చెప్పండి. ఇది డెమో మాత్రమే, అధికారిక ప్రభుత్వ ఫిర్యాదును పంపదు అని తెలుగులో స్పష్టం చేయండి."
-                : "You are JANASETU, a cautious public-service guide for an Indian citizen-services prototype. Answer in English. Use only supplied service records for specific government requirements. Never invent eligibility, fees, deadlines, contacts, official submission, or case status. If uncertain, point to an official department website. State that this demo does not file official complaints. Be concise and accessible." },
-              { role: "user", content: isTelugu
-                ? `ప్రశ్న (తెలుగు): ${message}\n\nసమాధానం తప్పనిసరిగా తెలుగులోనే ఇవ్వండి. ముందుగా సులభమైన తెలుగులో ప్రత్యక్ష సమాధానం ఇవ్వండి, ఆపై అవసరమైన తదుపరి చర్యలు చెప్పండి.\nసేవా రికార్డులు: ${JSON.stringify(context)}`
-                : `Question: ${message}\nCurated service records: ${JSON.stringify(context)}` }
+              { role: "system", content: "మీరు JANASETU అనే ప్రజాసేవల మార్గదర్శి. వినియోగదారు ఏ భాషలో ప్రశ్న అడిగినా, ప్రతి సమాధానాన్ని సహజమైన, సులభమైన తెలుగులోనే తెలుగు లిపిలో ఇవ్వండి. ఇంగ్లీష్‌లో సమాధానం ఇవ్వకండి; అధికారిక సంస్థలు లేదా వెబ్‌సైట్ పేర్లు అవసరమైతే మాత్రమే ఇంగ్లీష్‌లో ఉంచండి. అందించిన సేవా రికార్డుల ఆధారంగానే ప్రభుత్వ సేవల వివరాలు చెప్పండి. అర్హతలు, ఫీజులు, గడువులు, సంప్రదింపు వివరాలు లేదా అధికారిక ఫిర్యాదు నమోదైందని కల్పించకండి. వివరాలు తెలియకపోతే అధికారిక శాఖ వెబ్‌సైట్‌లో నిర్ధారించమని తెలుగులో చెప్పండి. ఇది డెమో మాత్రమే; ఈ ప్రోటోటైప్ ద్వారా అధికారిక ప్రభుత్వ ఫిర్యాదు పంపబడదని స్పష్టం చేయండి." },
+              { role: "user", content: `వినియోగదారి ప్రశ్న: ${message}\n\nప్రశ్న ఏ భాషలో ఉన్నా సమాధానం తప్పనిసరిగా తెలుగులోనే ఇవ్వండి. సులభమైన తెలుగులో ప్రత్యక్ష సమాధానం, తరువాత స్పష్టమైన తదుపరి చర్యలు ఇవ్వండి.\nసేవా రికార్డులు: ${JSON.stringify(context)}` }
             ]
           })
         });
         if (response.ok) {
           const data = await response.json();
           return res.status(200).json({
-            answer: data.choices?.[0]?.message?.content || "I could not verify an answer. Please check the relevant official source.",
+            answer: data.choices?.[0]?.message?.content || "క్షమించండి, సమాధానాన్ని నిర్ధారించలేకపోయాను. సంబంధిత అధికారిక వెబ్‌సైట్‌ను పరిశీలించండి.",
             sources: context.filter(s => s.official_url).map(s => ({ title: s.title, url: s.official_url, reviewed_on: s.reviewed_on })),
             verified_fromDirectory: context.length > 0, demo: true
           });
         }
       } catch (_) {}
     }
-    const isTelugu = /[\u0C00-\u0C7F]/.test(message);
-    const answer = isTelugu
-      ? (context.length
-        ? `మీ ప్రశ్నకు సంబంధించిన సేవా మార్గదర్శకం: ${context.map(s => `${s.title}. ${s.title.toLowerCase().includes("streetlight") || s.title.toLowerCase().includes("road") ? "వీధి దీపం లేదా రహదారి సమస్యను సంబంధిత స్థానిక అధికారికి తెలియజేయండి." : s.title.toLowerCase().includes("water") ? "నీటి సరఫరా సమస్యను మీ స్థానిక నీటి సరఫరా లేదా మున్సిపల్ అధికారికి తెలియజేయండి." : s.title.toLowerCase().includes("certificate") || s.title.toLowerCase().includes("document") ? "అవసరమైన పత్రాలు మరియు దరఖాస్తు విధానాన్ని అధికారిక వెబ్‌సైట్‌లో నిర్ధారించండి." : "తదుపరి చర్యలు మరియు అవసరాలను సంబంధిత అధికారిక వెబ్‌సైట్‌లో నిర్ధారించండి."}`).join("\n\n")}\n\nదయచేసి తాజా వివరాలను అధికారిక వెబ్‌సైట్‌లో నిర్ధారించండి. ఇది డెమో మాత్రమే; ఈ ప్రోటోటైప్ ద్వారా ప్రభుత్వానికి అధికారిక ఫిర్యాదు పంపబడదు.`
-        : "క్షమించండి, ప్రస్తుతం మీ ప్రశ్నకు సరిపోయే సేవా మార్గదర్శకం కనుగొనలేకపోయాను. సంబంధిత ప్రభుత్వ శాఖ అధికారిక వెబ్‌సైట్‌ను చూడండి. ఈ ప్రోటోటైప్ ద్వారా అధికారిక ఫిర్యాదు పంపబడదు.")
-      : (context.length
-        ? `I found a potentially relevant service guide: ${context.map(s => `${s.title} — ${s.description} Next step: ${s.steps}`).join("\n\n")} Please verify current requirements on the official website. This prototype does not file an official government complaint.`
-        : "I could not find a matching service guide in the current directory. Please check the relevant official department website. This prototype does not file an official government complaint.");
+    const answer = context.length
+      ? `మీ ప్రశ్నకు సంబంధించిన సేవా మార్గదర్శకం: ${context.map(s => `${s.title}. ${s.title.toLowerCase().includes("streetlight") || s.title.toLowerCase().includes("road") ? "వీధి దీపం లేదా రహదారి సమస్యను సంబంధిత స్థానిక అధికారికి తెలియజేయండి." : s.title.toLowerCase().includes("water") ? "నీటి సరఫరా సమస్యను మీ స్థానిక నీటి సరఫరా లేదా మున్సిపల్ అధికారికి తెలియజేయండి." : s.title.toLowerCase().includes("certificate") || s.title.toLowerCase().includes("document") ? "అవసరమైన పత్రాలు మరియు దరఖాస్తు విధానాన్ని అధికారిక వెబ్‌సైట్‌లో నిర్ధారించండి." : "తదుపరి చర్యలు మరియు అవసరాలను సంబంధిత అధికారిక వెబ్‌సైట్‌లో నిర్ధారించండి."}`).join("\n\n")}\n\nదయచేసి తాజా వివరాలను అధికారిక వెబ్‌సైట్‌లో నిర్ధారించండి. ఇది డెమో మాత్రమే; ఈ ప్రోటోటైప్ ద్వారా ప్రభుత్వానికి అధికారిక ఫిర్యాదు పంపబడదు.`
+      : "క్షమించండి, ప్రస్తుతం మీ ప్రశ్నకు సరిపోయే సేవా మార్గదర్శకం కనుగొనలేకపోయాను. సంబంధిత ప్రభుత్వ శాఖ అధికారిక వెబ్‌సైట్‌ను చూడండి. ఈ ప్రోటోటైప్ ద్వారా అధికారిక ఫిర్యాదు పంపబడదు.";
     return res.status(200).json({
       answer,
       sources: context.filter(s => s.official_url).map(s => ({ title: s.title, url: s.official_url, reviewed_on: s.reviewed_on })),
