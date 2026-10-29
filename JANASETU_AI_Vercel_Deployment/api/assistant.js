@@ -66,7 +66,7 @@ export default async function handler(req, res) {
             model: process.env.OPENAI_MODEL || "gpt-4o-mini",
             temperature: 0.2,
             messages: [
-              { role: "system", content: "You are JANASETU, a cautious public-service guide for an Indian citizen-services prototype. Use only supplied service records for specific government requirements. Never invent eligibility, fees, deadlines, contacts, official submission, or case status. If uncertain, say so and point to an official department website. State that this demo does not file official complaints. Be concise, accessible, and mirror Telugu if possible." },
+              { role: "system", content: "You are JANASETU, a cautious public-service guide for an Indian citizen-services prototype. If the user asks in Telugu, answer fully in natural Telugu; if the user asks in English, answer in English. Use only supplied service records for specific government requirements. Never invent eligibility, fees, deadlines, contacts, official submission, or case status. If uncertain, say so and point to an official department website. State that this demo does not file official complaints. Be concise and accessible." },
               { role: "user", content: `Question: ${message}\nCurated service records: ${JSON.stringify(context)}` }
             ]
           })
@@ -81,9 +81,14 @@ export default async function handler(req, res) {
         }
       } catch (_) {}
     }
-    const answer = context.length
-      ? `I found a potentially relevant service guide: ${context.map(s => `${s.title} — ${s.description} Next step: ${s.steps}`).join("\n\n")} Please verify current requirements on the official website. This prototype does not file an official government complaint.`
-      : "I could not find a matching service guide in the current directory. Please check the relevant official department website. This prototype does not file an official government complaint.";
+    const isTelugu = /[\u0C00-\u0C7F]/.test(message);
+    const answer = isTelugu
+      ? (context.length
+        ? `మీ ప్రశ్నకు సంబంధించిన సేవా మార్గదర్శకం: ${context.map(s => `${s.title}. ${s.title.toLowerCase().includes("streetlight") || s.title.toLowerCase().includes("road") ? "వీధి దీపం లేదా రహదారి సమస్యను సంబంధిత స్థానిక అధికారికి తెలియజేయండి." : s.title.toLowerCase().includes("water") ? "నీటి సరఫరా సమస్యను మీ స్థానిక నీటి సరఫరా లేదా మున్సిపల్ అధికారికి తెలియజేయండి." : s.title.toLowerCase().includes("certificate") || s.title.toLowerCase().includes("document") ? "అవసరమైన పత్రాలు మరియు దరఖాస్తు విధానాన్ని అధికారిక వెబ్‌సైట్‌లో నిర్ధారించండి." : "తదుపరి చర్యలు మరియు అవసరాలను సంబంధిత అధికారిక వెబ్‌సైట్‌లో నిర్ధారించండి."}`).join("\n\n")}\n\nదయచేసి తాజా వివరాలను అధికారిక వెబ్‌సైట్‌లో నిర్ధారించండి. ఇది డెమో మాత్రమే; ఈ ప్రోటోటైప్ ద్వారా ప్రభుత్వానికి అధికారిక ఫిర్యాదు పంపబడదు.`
+        : "క్షమించండి, ప్రస్తుతం మీ ప్రశ్నకు సరిపోయే సేవా మార్గదర్శకం కనుగొనలేకపోయాను. సంబంధిత ప్రభుత్వ శాఖ అధికారిక వెబ్‌సైట్‌ను చూడండి. ఈ ప్రోటోటైప్ ద్వారా అధికారిక ఫిర్యాదు పంపబడదు.")
+      : (context.length
+        ? `I found a potentially relevant service guide: ${context.map(s => `${s.title} — ${s.description} Next step: ${s.steps}`).join("\n\n")} Please verify current requirements on the official website. This prototype does not file an official government complaint.`
+        : "I could not find a matching service guide in the current directory. Please check the relevant official department website. This prototype does not file an official government complaint.");
     return res.status(200).json({
       answer,
       sources: context.filter(s => s.official_url).map(s => ({ title: s.title, url: s.official_url, reviewed_on: s.reviewed_on })),
