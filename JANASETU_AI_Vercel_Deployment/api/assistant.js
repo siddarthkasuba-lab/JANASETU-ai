@@ -3,6 +3,7 @@ import { getDb } from "../lib/db.js";
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed." });
   const message = String((req.body || {}).message || "").trim().slice(0, 1500);
+  const isTelugu = /[\u0C00-\u0C7F]/.test(message);
   if (message.length < 3) return res.status(400).json({ error: "Please describe your question in a little more detail." });
 
   try {
@@ -66,8 +67,8 @@ export default async function handler(req, res) {
             model: process.env.OPENAI_MODEL || "gpt-4o-mini",
             temperature: 0.2,
             messages: [
-              { role: "system", content: "మీరు JANASETU అనే ప్రజాసేవల మార్గదర్శి. వినియోగదారు ఏ భాషలో ప్రశ్న అడిగినా, ప్రతి సమాధానాన్ని సహజమైన, సులభమైన తెలుగులోనే తెలుగు లిపిలో ఇవ్వండి. ఇంగ్లీష్‌లో సమాధానం ఇవ్వకండి; అధికారిక సంస్థలు లేదా వెబ్‌సైట్ పేర్లు అవసరమైతే మాత్రమే ఇంగ్లీష్‌లో ఉంచండి. అందించిన సేవా రికార్డుల ఆధారంగానే ప్రభుత్వ సేవల వివరాలు చెప్పండి. అర్హతలు, ఫీజులు, గడువులు, సంప్రదింపు వివరాలు లేదా అధికారిక ఫిర్యాదు నమోదైందని కల్పించకండి. వివరాలు తెలియకపోతే అధికారిక శాఖ వెబ్‌సైట్‌లో నిర్ధారించమని తెలుగులో చెప్పండి. ఇది డెమో మాత్రమే; ఈ ప్రోటోటైప్ ద్వారా అధికారిక ప్రభుత్వ ఫిర్యాదు పంపబడదని స్పష్టం చేయండి." },
-              { role: "user", content: `వినియోగదారి ప్రశ్న: ${message}\n\nప్రశ్న ఏ భాషలో ఉన్నా సమాధానం తప్పనిసరిగా తెలుగులోనే ఇవ్వండి. సులభమైన తెలుగులో ప్రత్యక్ష సమాధానం, తరువాత స్పష్టమైన తదుపరి చర్యలు ఇవ్వండి.\nసేవా రికార్డులు: ${JSON.stringify(context)}` }
+              { role: "system", content: isTelugu ? "మీరు JANASETU అనే ప్రజాసేవల మార్గదర్శి. సమాధానం సహజమైన, సులభమైన తెలుగులో తెలుగు లిపిలో ఇవ్వండి. అందించిన సేవా రికార్డుల ఆధారంగానే వివరాలు చెప్పండి. అర్హతలు, ఫీజులు, గడువులు లేదా సంప్రదింపు వివరాలు కల్పించకండి. తెలియకపోతే అధికారిక శాఖ వెబ్‌సైట్‌లో నిర్ధారించమని చెప్పండి. ఇది డెమో మాత్రమే; అధికారిక ప్రభుత్వ ఫిర్యాదు పంపబడదని స్పష్టం చేయండి." : "You are JANASETU, a cautious public-service guide for an Indian citizen-services prototype. Answer in clear, accessible English. Use only supplied service records for specific government requirements. Never invent eligibility, fees, deadlines, contacts, official submission, or case status. If uncertain, point to an official department website. State that this demo does not file official complaints." },
+              { role: "user", content: isTelugu ? `ప్రశ్న (తెలుగు): ${message}\n\nసమాధానం తెలుగులోనే ఇవ్వండి. ముందుగా ప్రత్యక్ష సమాధానం, ఆపై తదుపరి చర్యలు చెప్పండి.\nసేవా రికార్డులు: ${JSON.stringify(context)}` : `Question: ${message}\n\nAnswer in English. Give a direct answer followed by practical next steps.\nCurated service records: ${JSON.stringify(context)}` }
             ]
           })
         });
@@ -81,9 +82,13 @@ export default async function handler(req, res) {
         }
       } catch (_) {}
     }
-    const answer = context.length
-      ? `మీ ప్రశ్నకు సంబంధించిన సేవా మార్గదర్శకం: ${context.map(s => `${s.title}. ${s.title.toLowerCase().includes("streetlight") || s.title.toLowerCase().includes("road") ? "వీధి దీపం లేదా రహదారి సమస్యను సంబంధిత స్థానిక అధికారికి తెలియజేయండి." : s.title.toLowerCase().includes("water") ? "నీటి సరఫరా సమస్యను మీ స్థానిక నీటి సరఫరా లేదా మున్సిపల్ అధికారికి తెలియజేయండి." : s.title.toLowerCase().includes("certificate") || s.title.toLowerCase().includes("document") ? "అవసరమైన పత్రాలు మరియు దరఖాస్తు విధానాన్ని అధికారిక వెబ్‌సైట్‌లో నిర్ధారించండి." : "తదుపరి చర్యలు మరియు అవసరాలను సంబంధిత అధికారిక వెబ్‌సైట్‌లో నిర్ధారించండి."}`).join("\n\n")}\n\nదయచేసి తాజా వివరాలను అధికారిక వెబ్‌సైట్‌లో నిర్ధారించండి. ఇది డెమో మాత్రమే; ఈ ప్రోటోటైప్ ద్వారా ప్రభుత్వానికి అధికారిక ఫిర్యాదు పంపబడదు.`
-      : "క్షమించండి, ప్రస్తుతం మీ ప్రశ్నకు సరిపోయే సేవా మార్గదర్శకం కనుగొనలేకపోయాను. సంబంధిత ప్రభుత్వ శాఖ అధికారిక వెబ్‌సైట్‌ను చూడండి. ఈ ప్రోటోటైప్ ద్వారా అధికారిక ఫిర్యాదు పంపబడదు.";
+    const answer = isTelugu
+      ? (context.length
+        ? `మీ ప్రశ్నకు సంబంధించిన సేవా మార్గదర్శకం: ${context.map(s => `${s.title}. ${s.title.toLowerCase().includes("streetlight") || s.title.toLowerCase().includes("road") ? "వీధి దీపం లేదా రహదారి సమస్యను సంబంధిత స్థానిక అధికారికి తెలియజేయండి." : s.title.toLowerCase().includes("water") ? "నీటి సరఫరా సమస్యను మీ స్థానిక నీటి సరఫరా లేదా మున్సిపల్ అధికారికి తెలియజేయండి." : s.title.toLowerCase().includes("certificate") || s.title.toLowerCase().includes("document") ? "అవసరమైన పత్రాలు మరియు దరఖాస్తు విధానాన్ని అధికారిక వెబ్‌సైట్‌లో నిర్ధారించండి." : "తదుపరి చర్యలు మరియు అవసరాలను సంబంధిత అధికారిక వెబ్‌సైట్‌లో నిర్ధారించండి."}`).join("\n\n")}\n\nతాజా వివరాలను అధికారిక వెబ్‌సైట్‌లో నిర్ధారించండి. ఇది డెమో మాత్రమే; అధికారిక ప్రభుత్వ ఫిర్యాదు పంపబడదు.`
+        : "క్షమించండి, ప్రస్తుతం సరిపోయే సేవా మార్గదర్శకం కనుగొనలేకపోయాను. సంబంధిత ప్రభుత్వ శాఖ అధికారిక వెబ్‌సైట్‌ను చూడండి. ఇది డెమో మాత్రమే.")
+      : (context.length
+        ? `Relevant service guidance: ${context.map(s => `${s.title} — ${s.description} Next step: ${s.steps}`).join("\n\n")} Please verify current requirements on the official website. This demo does not file an official government complaint.`
+        : "I couldn't find a matching service guide in the current directory. Please check the relevant official department website. This demo does not file an official government complaint.");
     return res.status(200).json({
       answer,
       sources: context.filter(s => s.official_url).map(s => ({ title: s.title, url: s.official_url, reviewed_on: s.reviewed_on })),
