@@ -115,7 +115,7 @@ Run unit tests:
 npm test
 ```
 
-The current automated unit tests cover admin authorization behavior. Verify deployed service and grievance workflows manually before submission; never describe unrun tests as passed. Follow [docs/TESTING.md](docs/TESTING.md).
+The current automated unit tests cover admin authorization behavior. Verify deployed service and grievance workflows manually before submission; never describe unrun tests as passed. Follow [docs/TESTING.md](docs/TESTING.md). Final deliverables and a demo-video script are in [docs/SUBMISSION.md](docs/SUBMISSION.md).
 
 ## Deployment
 
@@ -137,7 +137,7 @@ The current automated unit tests cover admin authorization behavior. Verify depl
 
 ## Team
 
-Team Alpha Intelligence — confirm all names, roll numbers, branch/section and each member's actual contribution before final submission.
+See [docs/SUBMISSION.md](docs/SUBMISSION.md) for the team details currently listed in the project presentation. Verify spelling and identifiers against official records, and add each member's actual contribution before final submission.
 
 ## Limitations and future scope
 
