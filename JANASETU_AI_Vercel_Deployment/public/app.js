@@ -15,3 +15,58 @@ $("#trackForm").addEventListener("submit",e=>{e.preventDefault();track()});
 $("#adminBtn").addEventListener("click",async()=>{const panel=$("#adminPanel");panel.hidden=false;panel.innerHTML='<div class="loading">Loading demo records…</div>';try{const d=await request("/grievances");panel.innerHTML='<div class="adminlist">'+(d.grievances||[]).map(g=>'<div class="adminitem"><div><b>'+esc(g.subject)+'</b><p>'+esc(g.reference)+' · '+esc(g.category)+' · '+esc(g.status)+'</p></div><div><select data-ref="'+esc(g.reference)+'">'+["Submitted","Under Review","In Progress","Action Required","Resolved","Closed"].map(s=>'<option '+(s===g.status?"selected":"")+'>'+s+'</option>').join("")+'</select><button class="ghost saveStatus" data-ref="'+esc(g.reference)+'">Save</button></div></div>').join("")||"No demo grievances yet."+'</div><p style="font-size:10px;color:#9a683f">Demonstration admin workspace. Do not use with real or sensitive citizen data.</p>';panel.querySelectorAll(".saveStatus").forEach(b=>b.addEventListener("click",async()=>{const ref=b.dataset.ref,status=panel.querySelector('select[data-ref="'+ref+'"]').value;try{await request("/grievance/"+encodeURIComponent(ref),{method:"PATCH",body:JSON.stringify({status,note:"Status updated in demo admin workspace."})});toast("Demo status updated");$("#trackRef").value=ref;await track();b.textContent="Saved"}catch(err){toast(err.message)}}))}catch(err){panel.innerHTML='<div class="trackcard">'+esc(err.message)+'</div>'}});
 $("#langBtn").addEventListener("click",()=>toast("Telugu-friendly input is supported; full interface translation is planned, not yet implemented."));
 loadServices();
+
+
+// Optional browser speech recognition: audio stays in the browser speech API;
+// only the recognized text is sent to the JANASETU assistant when submitted.
+function setupVoiceInput(buttonId, locale, languageLabel) {
+  const button = document.getElementById(buttonId);
+  if (!button) return;
+  button.addEventListener("click", () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const status = document.getElementById("micStatus");
+    const input = document.getElementById("chatInput");
+    if (!SpeechRecognition) {
+      status.textContent = "Voice input is not supported in this browser. Try the latest Chrome browser or type your question.";
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = locale;
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    button.classList.add("listening");
+    button.disabled = true;
+    status.textContent = "Listening in " + languageLabel + "… Please speak now.";
+    recognition.onresult = event => {
+      const transcript = event.results?.[0]?.[0]?.transcript || "";
+      if (transcript) {
+        input.value = input.value.trim() ? input.value.trim() + " " + transcript : transcript;
+        input.focus();
+        status.textContent = "Voice captured. Review your question, then press Get guidance.";
+      } else {
+        status.textContent = "I couldn't hear that clearly. Please try again.";
+      }
+    };
+    recognition.onerror = event => {
+      const messages = {
+        "not-allowed": "Microphone permission was denied. Allow microphone access in your browser settings.",
+        "no-speech": "No speech detected. Please try speaking a little louder.",
+        "network": "Speech recognition needs an internet connection in this browser. You can type your question instead."
+      };
+      status.textContent = messages[event.error] || "Voice input failed. Please try again or type your question.";
+    };
+    recognition.onend = () => {
+      button.classList.remove("listening");
+      button.disabled = false;
+    };
+    try { recognition.start(); }
+    catch (_) {
+      button.classList.remove("listening");
+      button.disabled = false;
+      status.textContent = "Couldn't start the microphone. Please try again.";
+    }
+  });
+}
+setupVoiceInput("micTelugu", "te-IN", "Telugu");
+setupVoiceInput("micEnglish", "en-IN", "English");
