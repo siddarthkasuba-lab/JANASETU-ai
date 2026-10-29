@@ -2,7 +2,7 @@ import { getDb } from "../lib/db.js";
 import { requireAdmin } from "../lib/admin-auth.js";
 
 function makeRef() {
-  return "JNS-" + crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
+  return "JNS-" + crypto.randomUUID().replace(/-/g, "").slice(0, 12).toUpperCase();
 }
 
 export default async function handler(req, res) {
@@ -15,8 +15,10 @@ export default async function handler(req, res) {
       const category = String(b.category || "").trim();
       if (subject.length < 4 || subject.length > 120) return res.status(400).json({ error: "Subject must be 4–120 characters." });
       if (description.length < 20 || description.length > 3000) return res.status(400).json({ error: "Description must be 20–3000 characters." });
-      if (!category || category.length > 80) return res.status(400).json({ error: "Choose a valid category." });
-      if (/\b\d{12}\b/.test(subject + " " + description)) return res.status(400).json({ error: "Please remove sensitive identification numbers before submitting." });
+      const allowedCategories = ["Water & sanitation", "Roads & streetlights", "Certificates & documents", "Public health", "Education", "Electricity", "Other"];
+      if (!allowedCategories.includes(category)) return res.status(400).json({ error: "Choose a valid category from the list." });
+      const allText = [subject, description, String(b.location || ""), String(b.department || "")].join(" ");
+      if (/\\b\\d{12}\\b/.test(allText)) return res.status(400).json({ error: "Please remove sensitive identification numbers before submitting." });
       const reference = makeRef();
       const rows = await sql`
         INSERT INTO grievances (reference,subject,description,category,location,department,status,is_demo)
