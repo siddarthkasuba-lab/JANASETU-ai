@@ -7,12 +7,39 @@ export default async function handler(req, res) {
 
   try {
     const sql = getDb();
-    const words = message.split(/\s+/).filter(w => w.length > 4).slice(0, 2);
-    const pattern = "%" + words.join("%") + "%";
-    const context = await sql`SELECT title,category,description,documents,steps,official_url,reviewed_on
+    // Load the small curated directory and rank each service against individual
+    // query terms. Requiring several words to occur in the same column caused
+    // valid queries such as "streetlight not working" to return no matches.
+    const directory = await sql`SELECT title,category,description,documents,steps,official_url,reviewed_on
       FROM services
-      WHERE title ILIKE ${pattern} OR category ILIKE ${pattern} OR description ILIKE ${pattern}
-      ORDER BY title LIMIT 5`;
+      ORDER BY title LIMIT 100`;
+    const normalizedMessage = message.toLowerCase()
+      .replace(/street\s*lights?/g, "streetlight")
+      .replace(/streetlights?/g, "streetlight")
+      .replace(/[^a-z0-9\s]/g, " ");
+    const stopWords = new Set(["about","after","again","been","being","could","does","from","have","help","into","near","need","please","should","that","their","there","these","they","this","through","what","when","where","which","while","with","would","working","issue","problem","report","days","several"]);
+    const terms = [...new Set(normalizedMessage.split(/\s+/)
+      .filter(w => w.length > 3 && !stopWords.has(w)))];
+    const scored = directory.map(service => {
+      const title = String(service.title || "").toLowerCase().replace(/street\s*lights?/g, "streetlight").replace(/[^a-z0-9\s]/g, " ");
+      const category = String(service.category || "").toLowerCase().replace(/street\s*lights?/g, "streetlight").replace(/[^a-z0-9\s]/g, " ");
+      const description = String(service.description || "").toLowerCase().replace(/street\s*lights?/g, "streetlight").replace(/[^a-z0-9\s]/g, " ");
+      const haystack = title + " " + category + " " + description;
+      let score = 0;
+      for (const term of terms) {
+        if (title.includes(term)) score += 5;
+        else if (category.includes(term)) score += 4;
+        else if (description.includes(term)) score += 1;
+      }
+      if (normalizedMessage.includes("streetlight") &&
+          (title.includes("streetlight") || category.includes("streetlight") || description.includes("streetlight"))) score += 10;
+      if ((normalizedMessage.includes("road") || normalizedMessage.includes("streetlight")) &&
+          (title.includes("road") || category.includes("road"))) score += 2;
+      return { service, score, haystack };
+    }).filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+    const context = scored.map(item => item.service);
 
     if (process.env.OPENAI_API_KEY) {
       try {
