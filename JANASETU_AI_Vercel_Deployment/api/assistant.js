@@ -57,6 +57,7 @@ export default async function handler(req, res) {
       .slice(0, 5);
     const context = scored.map(item => item.service);
 
+    const isTelugu = /[\u0C00-\u0C7F]/.test(message);
     if (process.env.OPENAI_API_KEY) {
       try {
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -66,8 +67,12 @@ export default async function handler(req, res) {
             model: process.env.OPENAI_MODEL || "gpt-4o-mini",
             temperature: 0.2,
             messages: [
-              { role: "system", content: "You are JANASETU, a cautious public-service guide for an Indian citizen-services prototype. If the user asks in Telugu, answer fully in natural Telugu; if the user asks in English, answer in English. Use only supplied service records for specific government requirements. Never invent eligibility, fees, deadlines, contacts, official submission, or case status. If uncertain, say so and point to an official department website. State that this demo does not file official complaints. Be concise and accessible." },
-              { role: "user", content: `Question: ${message}\nCurated service records: ${JSON.stringify(context)}` }
+              { role: "system", content: isTelugu
+                ? "మీరు JANASETU అనే ప్రజాసేవల మార్గదర్శి. మీ సమాధానం మొత్తం సహజమైన, సులభమైన తెలుగులోనే తెలుగు లిపిలో రాయాలి. ఇంగ్లీష్‌లో సమాధానం ఇవ్వకండి; అవసరమైన అధికారిక పేర్లు లేదా వెబ్‌సైట్ పేర్లు మాత్రమే ఇంగ్లీష్‌లో ఉండవచ్చు. అందించిన సేవా రికార్డుల ఆధారంగానే వివరాలు చెప్పండి. అర్హతలు, ఫీజులు, గడువులు, ఫోన్ నంబర్లు లేదా అధికారికంగా ఫిర్యాదు నమోదైందని కల్పించకండి. తెలియకపోతే అధికారిక శాఖ వెబ్‌సైట్‌లో నిర్ధారించమని తెలుగులో చెప్పండి. ఇది డెమో మాత్రమే, అధికారిక ప్రభుత్వ ఫిర్యాదును పంపదు అని తెలుగులో స్పష్టం చేయండి."
+                : "You are JANASETU, a cautious public-service guide for an Indian citizen-services prototype. Answer in English. Use only supplied service records for specific government requirements. Never invent eligibility, fees, deadlines, contacts, official submission, or case status. If uncertain, point to an official department website. State that this demo does not file official complaints. Be concise and accessible." },
+              { role: "user", content: isTelugu
+                ? `ప్రశ్న (తెలుగు): ${message}\n\nసమాధానం తప్పనిసరిగా తెలుగులోనే ఇవ్వండి. ముందుగా సులభమైన తెలుగులో ప్రత్యక్ష సమాధానం ఇవ్వండి, ఆపై అవసరమైన తదుపరి చర్యలు చెప్పండి.\nసేవా రికార్డులు: ${JSON.stringify(context)}`
+                : `Question: ${message}\nCurated service records: ${JSON.stringify(context)}` }
             ]
           })
         });
