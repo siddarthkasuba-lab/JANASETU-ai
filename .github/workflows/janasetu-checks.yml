@@ -1,0 +1,29 @@
+name: JANASETU checks
+
+on:
+  push:
+    paths:
+      - "JANASETU_AI_Vercel_Deployment/**"
+      - ".github/workflows/janasetu-checks.yml"
+  pull_request:
+    paths:
+      - "JANASETU_AI_Vercel_Deployment/**"
+      - ".github/workflows/janasetu-checks.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: JANASETU_AI_Vercel_Deployment
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+      - run: node --check api/assistant.js
+      - run: node --check api/grievances.js
+      - run: node --check "api/grievance/[reference].js"
+      - run: node --check api/services.js
+      - run: node --check public/app.js
