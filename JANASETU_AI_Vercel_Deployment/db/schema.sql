@@ -22,9 +22,20 @@ CREATE TABLE IF NOT EXISTS grievances (
   status TEXT NOT NULL DEFAULT 'Submitted'
     CHECK (status IN ('Submitted','Under Review','In Progress','Action Required','Resolved','Closed')),
   is_demo BOOLEAN NOT NULL DEFAULT TRUE,
+  phone_number TEXT,
+  lookup_pin_salt TEXT,
+  lookup_pin_hash TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS grievance_lookup_attempts (
+  id BIGSERIAL PRIMARY KEY,
+  phone_hash TEXT NOT NULL,
+  ip_hash TEXT NOT NULL,
+  attempted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS grievance_lookup_attempts_time_idx ON grievance_lookup_attempts (attempted_at);
 
 CREATE TABLE IF NOT EXISTS grievance_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
