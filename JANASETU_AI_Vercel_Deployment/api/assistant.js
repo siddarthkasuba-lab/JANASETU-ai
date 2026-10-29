@@ -13,7 +13,23 @@ export default async function handler(req, res) {
     const directory = await sql`SELECT title,category,description,documents,steps,official_url,reviewed_on
       FROM services
       ORDER BY title LIMIT 100`;
-    const normalizedMessage = message.toLowerCase()
+    const lowerMessage = message.toLowerCase();
+    // The current directory is English, so add simple keyword bridges for
+    // common Telugu public-service requests before ranking the records.
+    const teluguTerms = [];
+    if (/వీధి\s*దీపం|వీధి\s*లైట్|స్ట్రీట్\s*లైట్|దీపాలు/.test(lowerMessage)) {
+      teluguTerms.push("streetlight", "road");
+    }
+    if (/నీటి\s*సరఫరా|నీళ్లు|తాగునీరు|నీరు\s*రావడం\s*లేదు/.test(lowerMessage)) {
+      teluguTerms.push("water", "supply");
+    }
+    if (/సర్టిఫికెట్|సర్టిఫికేట్|జనన\s*ధృవీకరణ|పుట్టిన\s*తేదీ/.test(lowerMessage)) {
+      teluguTerms.push("certificate", "documents");
+    }
+    if (/విద్యుత్|కరెంట్|కరెంటు/.test(lowerMessage)) {
+      teluguTerms.push("electricity", "supply");
+    }
+    const normalizedMessage = (lowerMessage + " " + teluguTerms.join(" "))
       .replace(/street\s*lights?/g, "streetlight")
       .replace(/streetlights?/g, "streetlight")
       .replace(/[^a-z0-9\s]/g, " ");
