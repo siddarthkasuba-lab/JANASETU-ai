@@ -24,6 +24,7 @@ jobs:
       - run: npm test
       - run: node --check api/assistant.js
       - run: node --check api/grievances.js
+      - run: node --check api/grievance-lookup.js
       - run: node --check "api/grievance/[reference].js"
       - run: node --check api/services.js
       - run: node --check public/app.js
