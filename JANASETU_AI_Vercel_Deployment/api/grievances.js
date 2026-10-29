@@ -1,4 +1,5 @@
 import { getDb } from "../lib/db.js";
+import { requireAdmin } from "../lib/admin-auth.js";
 
 function makeRef() {
   return "JNS-" + crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
@@ -27,6 +28,7 @@ export default async function handler(req, res) {
       return res.status(201).json({ grievance: rows[0], message: "Demo grievance created successfully." });
     }
     if (req.method === "GET") {
+      if (!requireAdmin(req, res)) return;
       const rows = await sql`SELECT reference,subject,category,location,department,status,created_at,updated_at
         FROM grievances ORDER BY created_at DESC LIMIT 100`;
       return res.status(200).json({ grievances: rows, count: rows.length, demo: true });
