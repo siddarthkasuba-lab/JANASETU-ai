@@ -34,7 +34,7 @@ Success: HTTP 201 with `grievance.reference`. Invalid input returns HTTP 400. No
 
 ## GET /api/grievance/{reference}
 
-Retrieves a demo grievance and its history by reference. Reference format currently accepts `JNS-` followed by 8 hexadecimal characters. Success: HTTP 200. Invalid format: HTTP 400. Unknown reference: HTTP 404. The response is limited to tracking fields and does not return the description.
+Retrieves a demo grievance and its history by reference. New references use `JNS-` followed by 12 hexadecimal characters; existing 8-character demo references remain supported for compatibility. Success: HTTP 200. Invalid format: HTTP 400. Unknown reference: HTTP 404. The response is limited to tracking fields and does not return the description.
 
 ## GET /api/grievances (admin)
 
