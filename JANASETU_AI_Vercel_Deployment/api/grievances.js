@@ -18,7 +18,7 @@ export default async function handler(req, res) {
       const allowedCategories = ["Water & sanitation", "Roads & streetlights", "Certificates & documents", "Public health", "Education", "Electricity", "Other"];
       if (!allowedCategories.includes(category)) return res.status(400).json({ error: "Choose a valid category from the list." });
       const allText = [subject, description, String(b.location || ""), String(b.department || "")].join(" ");
-      if (/\\b\\d{12}\\b/.test(allText)) return res.status(400).json({ error: "Please remove sensitive identification numbers before submitting." });
+      if (/\b\d{12}\b/.test(allText)) return res.status(400).json({ error: "Please remove sensitive identification numbers before submitting." });
       const reference = makeRef();
       const rows = await sql`
         INSERT INTO grievances (reference,subject,description,category,location,department,status,is_demo)
